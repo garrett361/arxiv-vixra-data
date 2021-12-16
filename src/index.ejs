@@ -1,0 +1,278 @@
+<!doctype html>
+
+<!-- Any figures to-be called with <img ...> should be placed in /static and called 
+as with /static as their root. E.g. <img src="/diagrams/fig1.png">
+-->
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="template.v2.js"></script>
+  <title>arXiv/viXra - The Data - Garrett Goon</title>
+</head>
+
+<body>
+
+  <!-- I added a date field to more easily add the date to the front matter. Removed the DOI fiel -->
+
+  <d-front-matter>
+    <script type="text/json">
+      {
+        "title": "arXiv/viXra - Data",
+        "description": "An example project using Webpack, Babel, and Svelte.",
+        "authors": [
+          {
+            "author": "Garrett Goon",
+            "authorURL": "https://garrettgoon.com",
+            "affiliation": "CMU",
+            "affiliationURL": "https://www.cmu.edu/physics/"
+          }
+        ],
+        "katex": {
+          "delimiters": [
+            {
+              "left": "$",
+              "right": "$",
+              "display": false
+            },
+            {
+              "left": "$$",
+              "right": "$$",
+              "display": true
+            }
+          ]
+        },
+        "date" : "5 November, 2021"
+      }
+  </script>
+  </d-front-matter>
+
+  <d-title>
+    <h1>arXiv/viXra - The Data</h1>
+    <p>Diving in.</p>
+  </d-title>
+
+  <d-article>
+
+    <h3>Wading Through</h3>
+
+    <blockquote>
+      The first step to training a neural net is to not touch any neural net code at all and instead begin by thoroughly
+      inspecting your data.
+      This step is critical. I like to spend copious amount of time (measured in units of hours) scanning through
+      thousands of examples, understanding their distribution and looking for patterns.
+    </blockquote>
+    <p>
+      This quote is from Andrej Karpaty's excellent post
+      <em>
+        <a target="_blank" rel="noopener noreferrer" href="https://arxiv.org">A Recipe for Training Neural Networks
+        </a>
+      </em>, and it is advice<d-footnote id="d-footnote-wrong-guesses">
+        Another sage piece of advice from the post: <em>don't be a hero.</em> Start simple and be conservative in your
+        rate of adding bells and whistles.
+      </d-footnote> well-taken. Below, I summarize my results in applying this advice to the arXiv and viXra
+      datasets. I detail the gross properties of the sets,
+      their patterns and distinctions,
+      and the process of normalizing the text for the purposes of both feeding the data into ML models and preventing
+      accidental cheating by
+      including unwanted technical clues in the training examples. In particular, I provide a cautionary tale in which I
+      failed
+      at this final task and the tell-tale signs thereof.
+    </p>
+
+
+
+    <h3>Gross Properties</h3>
+
+    <p>
+      There is far more data<d-footnote id='data'>
+        The arXiv dataset is <a target='_blank' rel='noopener noreferrer'
+          href='https://www.kaggle.com/Cornell-University/arxiv'>
+          publicly available on Kaggle.</a>
+        I wrote a small <d-code language='python'>python</d-code> web-scraper to collect the viXra data.
+      </d-footnote> for arXiv than viXra (the ratio of papers is 50:1) and the alignment of categories is not perfect.
+      That is, while the two repositories cover many of the same topics, such as
+    </p>
+    <ul>
+      <li>
+        Number Theory
+      </li>
+      <li>
+        Condensed Matter
+      </li>
+      <li>
+        Data Structures and Algorithms
+      </li>
+    </ul>
+    <p>
+      there also exist categories that belong to arXiv or viXra alone:
+    </p>
+    <ul>
+      <li>
+        <a target='_blank' rel='noopener noreferrer' href='https://vixra.org/mind'>
+          Mind Science</a> (a sub-category of Biology) <em>(viXra only)</em>
+      </li>
+      <li>
+        <a target='_blank' rel='noopener noreferrer' href='https://arxiv.org/list/cs.DC/recent'>Distributed, Parallel,
+          and Cluster Computing</a> <em>(arXiv only)</em>
+      </li>
+      <li>
+        <a target='_blank' rel='noopener noreferrer' href='https://vixra.org/reli/'>Religion and Spiritualism</a>
+        <em>(viXra only)</em>
+      </li>
+    </ul>
+    <p>
+      This provides a natural sanity check on the final models, since we naturally expect them to have an easier time
+      classifying papers which
+      belong to a category present in only one of the two repositories.
+    </p>
+
+
+    <h3>Patterns</h3>
+
+    <p>
+      Various patterns emerge when inspecting the data.
+    </p>
+
+    <p>
+      For one, the viXra data is far more irregular, in nearly every sense:
+    </p>
+    <ul>
+      <li>
+        Many more duplicate title/abstract pairs exist on viXra.<d-footnote id='duplicates'>
+          There are multiple viXra examples in which the same paper was seemingly submitted in different years, such as
+          <a target='_blank' rel='noopener noreferrer' href='https://vixra.org/abs/1602.0117'>this 2016</a> and
+          <a target='_blank' rel='noopener noreferrer' href='https://vixra.org/abs/1705.0420'>this 2017</a> submission.
+          The arXiv data
+          is not free of similar issues, however: for whatever reason <a target='_blank' rel='noopener noreferrer'
+            href='https://arxiv.org/abs/1712.01655'>this (now-withdrawn, with comment) submission</a>
+          is an exact duplicate of <a target='_blank' rel='noopener noreferrer'
+            href='https://arxiv.org/abs/1703.04332'>this paper submitted earlier the same year.</a>
+        </d-footnote>
+      </li>
+      <li>
+        viXra papers are more likely to have very short or very long<d-footnote id='long-abstract'>
+          <a target='_blank' rel='noopener noreferrer' href='https://vixra.org/abs/1905.0204'>As in this extremely long
+            viXra abstract.</a> Some outliers were also
+          due to the web-scraping process in which the viXra titles and abstracts were taken directly from the paper's
+          landing page. For instance,
+          <a target='_blank' rel='noopener noreferrer' href='https://vixra.org/abs/1702.0311'>this article's
+            abstract</a> is listed simply as "1", but inspection of
+          the pdf source shows that a longer abstract does indeed exist.
+        </d-footnote> abstracts and titles.
+      </li>
+      <li>
+        viXra papers are more likely<d-footnote id='common-chars'>
+          For instance, taking a balanced set of training abstracts and filtering out those which have more than 3% of
+          their characters outside of the set of English and Greek characters, punctuation, and numbers removes
+          <d-math>\mathcal{O}(2000)</d-math> viXra examples and only <d-math>\mathcal{O}(10)</d-math> arXiv ones
+        </d-footnote> to be written in languages other than English.
+      </li>
+      <li>
+        There exist a far wider variety of <d-code language='js'>unicode</d-code> characters among the viXra papers
+        <d-footnote id='unusual-chars'>
+          After forcing all text to lower-case to normalize, arXiv titles and abstracts were primarily comprised of the
+          <a target='_blank' rel='noopener noreferrer' href='https://theasciicode.com.ar/'>usual 69 printable,
+            non-upper-case ASCII characters</a>. In contrast,
+          viXra title and abstracts were found to use 172 and 393 distinct characters, respectively. Dead giveaways for
+          viXra papers from either an algorithmic or human perspective include the use of <d-code language='js'>unicode</d-code> Greek characters such as ϕ or ξ or mathematical symbols such as √ or ∫ (as
+          opposed to writing these in <d-code language='python'>LaTex</d-code>).
+        </d-footnote>.
+
+      </li>
+    </ul>
+
+    <p>
+      arXiv papers also tend to be much wordier. As the graphic below demonstrates, there is a clear distinction in the
+      distribution of arXiv and viXra papers in terms of counting statistics such as title length or the variance in
+      word
+      length in their abstracts. (Based on this plot alone, one should expect that even simple algorithms may be able to
+      determine the source at a reasonable rate; see <a target='_blank' rel='noopener noreferrer'
+        href='https://garrettgoon.com/arxiv-vixra-baseline-models'>Baseline Models</a>.) Academics are a loquacious
+      <d-footnote id='wordy'>They also tend to be long-winded, circumlocutory, logorrheic, and pleonastic.</d-footnote>
+      bunch.
+    </p>
+
+    <figure class='center'>
+      <img src='images/balanced_filtered_data_df_pairplot.png' alt='Corner plot of data statistics.'>
+      <figcaption>
+        Some of the statistical differences between arXiv (blue) and viXra (orange) data.
+        Data points are a randomly selected, equally balanced subsample of the combined dataset.
+      </figcaption>
+    </figure>
+
+    <p>
+      One last pattern I can't resist but mention is <a target='_blank' rel='noopener noreferrer'
+        href='http://fs.unm.edu/FlorentinSmarandache.htm'>Smarandache</a>. A simple search on <a target='_blank'
+        rel='noopener noreferrer' href='https://vixra.org'>viXra.org</a> for "Smarandache" yields over 6,300 results
+      while the analogous search on <a target='_blank' rel='noopener noreferrer'
+        href='https://arxiv.org/search/?query=Smarandache&searchtype=all&source=header'>arXiv.org</a> only gives around
+      300. Simply take the <a target='_blank' rel='noopener noreferrer'
+        href='https://garrettgoon.com/arxiv-vixra-quiz/'>arXiv/viXra quiz</a> for a few minutes and you will likely see
+      multiple mentions of this name (or the associated phrase "Neutrosophic"). <a target='_blank'
+        rel='noopener noreferrer'
+        href='https://www.reddit.com/r/Physics/comments/qamty1/comment/hh5b3lp/?utm_source=share&utm_medium=web2x&context=3'>As
+        this Reddit commenter</a> notes, the presence of "Smarandache" is a nearly-perfect and non-trivial predictor
+      that the paper is from viXra.
+    </p>
+
+    <h3>Normalization</h3>
+
+
+
+
+    <h3>Cautionary Tale</h3>
+
+
+
+    <h3>Datasets</h3>
+
+  </d-article>
+
+
+
+  <d-appendix>
+
+
+    <h3>Acknowledgments</h3>
+
+    <p>
+      Thank you to <a href="https://distill.pub" target="_blank" rel="noopener noreferrer">the <em>Distill</em> team</a>
+      for making their
+      <a href="https://github.com/distillpub" target="_blank" rel="noopener noreferrer">article template publicly
+        available.</a> I also gratefully
+      acknowledge
+      useful conversations with Matt Gormley, Matt Malloy, Thomas Schaaf, and Rami Vanguri in the course of this
+      project.
+    </p>
+
+
+    <h3>Helpful Links and Resources</h3>
+
+    <p>
+      Feather format. Dask.
+    </p>
+
+    <ul class="color-dot-ul">
+      <li>
+        <a target="_blank" rel="noopener noreferrer" href="https://vixra.org">Link 1</a>
+      </li>
+      <li>
+        <a target="_blank" rel="noopener noreferrer" href="https://vixra.org">Link 2</a>
+      </li>
+    </ul>
+
+    <d-footnote-list></d-footnote-list>
+    <d-citation-list></d-citation-list>
+  </d-appendix>
+
+
+  <!-- bibliography will be inlined during Distill pipeline's pre-rendering
+    (GG: I have not managed to get the bibliography to compile after the ejs
+     is converted to a static html file, so commenting out)
+  <d-bibliography src="bibliography.bib"></d-bibliography>
+
+   -->
+
+
+</body>
