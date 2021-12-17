@@ -54,6 +54,15 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
 
   <d-article>
 
+    <p>
+      <em>
+        <a target='_blank' rel='noopener noreferrer'
+          href='https://github.com/garrett361/arxiv-vixra-ml/tree/main/data_exploration'>Note:
+          The Jupyter/Colab notebooks I
+          used to perform much of the following analysis can be found on my GitHub page.</a>
+      </em>
+    </p>
+
     <h3>Wading Through</h3>
 
     <blockquote>
@@ -89,7 +98,14 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
         The arXiv dataset is <a target='_blank' rel='noopener noreferrer'
           href='https://www.kaggle.com/Cornell-University/arxiv'>
           publicly available on Kaggle.</a>
-        I wrote a small <d-code language='python'>python</d-code> web-scraper to collect the viXra data.
+        I wrote a small <d-code language='python'>python</d-code> web-scraper to collect the viXra data, which can be <a
+          target='_blank' rel='noopener noreferrer'
+          href='https://www.dropbox.com/s/4gw9wv90kqyeh95/vixra_raw.feather?dl=0'>downloaded here</a> as a <d-code
+          language='python'>.feather</d-code> file (18MB).
+        <a target='_blank' rel='noopener noreferrer'
+          href='https://pandas.pydata.org/docs/reference/api/pandas.read_feather.html'>
+          <d-code language='python'>pandas</d-code> handles <d-code language='python'>.feather</d-code> files natively
+        </a> and they are a much more efficient alternative to <d-code language='python'>.csv</d-code>.
       </d-footnote> for arXiv than viXra (the ratio of papers is 50:1) and the alignment of categories is not perfect.
       That is, while the two repositories cover many of the same topics, such as
     </p>
@@ -122,9 +138,10 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       </li>
     </ul>
     <p>
-      This provides a natural sanity check on the final models, since we naturally expect them to have an easier time
+      This provides a natural sanity check on the final models, since one naturally expects them to have an easier time
       classifying papers which
-      belong to a category present in only one of the two repositories.
+      belong to a category present in only one of the two repositories. In particular, this should provide a test
+      regarding the ability of a model to discern semantic differences.
     </p>
 
 
@@ -175,7 +192,9 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
           <a target='_blank' rel='noopener noreferrer' href='https://theasciicode.com.ar/'>usual 69 printable,
             non-upper-case ASCII characters</a>. In contrast,
           viXra title and abstracts were found to use 172 and 393 distinct characters, respectively. Dead giveaways for
-          viXra papers from either an algorithmic or human perspective include the use of <d-code language='js'>unicode</d-code> Greek characters such as ϕ or ξ or mathematical symbols such as √ or ∫ (as
+          viXra papers from either an algorithmic or human perspective include the use of
+          <d-code language='js'>unicode</d-code> Greek characters such as ϕ or ξ or mathematical symbols such as √ or ∫
+          (as
           opposed to writing these in <d-code language='python'>LaTex</d-code>).
         </d-footnote>.
 
@@ -216,16 +235,131 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       that the paper is from viXra.
     </p>
 
-    <h3>Normalization</h3>
+    <h3>Filtering</h3>
 
+    <p>
+      Distinguishing arXiv and viXra papers by technical clues such as the characters they use is not particularly
+      interesting. Instead, being able to make the distinction based on a title or abstract's actual content (i.e.
+      semantic meaning) would be much preferrable. At the same time, some technical markers (primarily the presence or
+      absence of <d-code language='python'>LaTeX</d-code>) <em>do</em> carry significant stylistic meaning and, as a
+      researcher, can represent obvious signals as to a paper's source.
+    </p>
 
+    <p>
+      For the above reasons, I apply filters such as the following to the data (<a target='_blank'
+        rel='noopener noreferrer'
+        href='https://github.com/garrett361/arxiv-vixra-ml/tree/main/data_exploration'>notebooks here</a>):
+    </p>
 
+    <ul>
+      <li>
+        Filter based on the prevalence of characters outside of the usual ASCII range.
+      </li>
+      <li>
+        Filter extreme outliers by counting statistics, such as character length, word count, fraction of numerical
+        characters, etc.
+      </li>
+    </ul>
+    <p>
+      The above steps primarily filter out viXra articles which would be fairly trivial to classify and are hence not
+      particularly interesting for this project.
+    </p>
+
+    <h3>
+      Text Normalization
+    </h3>
+
+    <p>
+      Properly normalizing the remaining text is important both for avoiding accidental cheating (see the next section)
+      and for making a fair comparison between model and human performance
+      <d-footnote id='fair'>
+        Some examples: as can be seen <a target='_blank' rel='noopener noreferrer'
+          href='https://github.com/garrett361/arxiv-vixra-ml/blob/main/data_exploration/data_normalization_and_tokenization.ipynb'>in
+          this notebook</a> about a third of viXra titles (and none of the arXiv titles)
+        contain a
+        <d-code language='python'>\r</d-code> <a target='_blank' rel='noopener noreferrer'
+          href='https://stackoverflow.com/questions/1279779/what-is-the-difference-between-r-and-n'>carriage return</a>
+        character, and 40% of arXiv titles (and none of the viXra titles) have a <d-code language='python'>\n</d-code>
+        newline character. Neither of these technical clues are accessible to the human participants at <a
+          target='_blank' rel='noopener noreferrer'
+          href='https://garrettgoon.com/arxiv-vixra-quiz/'>garrettgoon.com/arxiv-vixra-quiz</a>.
+      </d-footnote>.
+    </p>
+
+    <p>
+      For these reasons, I performed a fairly brutal and basic normalization to the text:
+    </p>
+    <ul>
+      <li>
+        The <a target='_blank' rel='noopener noreferrer' href='https://pypi.org/project/Unidecode/'>
+          <d-code language='python'>unidecode</d-code>package
+        </a> was used to convert all characters to the ASCII range.
+      </li>
+      <li>
+        All text had <d-code language='python'>.strip()</d-code> applied and all characters were forced lower-case with
+        <d-code language='python'>.lower()</d-code>.
+      </li>
+      <li>
+        Spaces were inserted around all punctuation marks and any <a target='_blank' rel='noopener noreferrer'
+          href='https://en.wikipedia.org/wiki/Control_character'>ASCII control characters</a> were replaced by blank
+        spaces (and any consecutive blanks were condensed into a single space).
+      </li>
+    </ul>
 
     <h3>Cautionary Tale</h3>
 
+    <p>
+      If you see a plot of validation accuracy vs time like the one below<d-footnote id='cheat'>
+        This plot was from a test in which a single blank space was inserted at the end of every viXra title. A simple
+        linear model was used in the test: one-hot encoded text was flattened into a vector and passed through a single
+        <d-code language='python'>nn.Linear</d-code> layer and sigmoid function, i.e. the arXiv/viXra probability for a
+        text vector <d-math>\vec{t}</d-math> was given by <d-math>s = \sigma\left(W\cdot \vec{t}+b\right)</d-math>. In
+        other words, logistic regression. The actual cheat described here was found when testing recurrent architectures and the corresponding plot was even
+        more dramatic. This test was done to demonstrate the ability of even relatively simple models to pick up on
+        technical biases.
+      </d-footnote> for any non-trivial dataset, you are probably cheating. The plot correspond to achieving near 100%
+      validation-set accuracy after only a handful of epochs. Finding the cheat
+      may not be easy, however.
+    </p>
 
 
-    <h3>Datasets</h3>
+    <iframe
+      src="https://wandb.ai/garrett361/balanced_title_one_hot_fc_cheating_test/reports/Cheating-with-Whitespace--VmlldzoxMzUwNDAx"
+      style="border:none;height:1024px;width:100%">
+    </iframe>
+
+    <p>
+      In the course of testing recurrent architectures, I generate a more-extreme version of the above when training
+      on
+      abstracts. The analogous plots for the title data did not show similarly surprising accuracy. While I expected
+      to
+      (and eventually did) find some technical cheat as the cause, it was quite confusing how this could occur for the
+      abstracts, but not the titles, as both texts had the same normalization and filtering procedures applied to
+      them.
+    </p>
+
+    <p>
+      In the end, the root cause was the fact that all raw arXiv abstracts started with a blank space and ends with a
+      <d-code language='python'>\n</d-code> newline character, while none of the other datasets displayed similar
+      technical regularities. Due to a typo<d-footnote id='typo'>
+        I had a simple <d-code language='python'>s.strip()</d-code> line in my code, rather than the desired <d-code
+          language='python'>s = s.strip()</d-code>.
+      </d-footnote>
+      this leading and trailing whitespace was not properly stripped. Because the technical clues were in whitespace,
+      they were difficult to detect by eye, but a systematic exploration of the data revealed the issue.
+    </p>
+
+    <h3>Final Datasets</h3>
+
+    <p>
+      After filtering, approximately 30,000 viXra and 1.7 million arXiv examples remained. In order to handle the
+      massive data imbalance (and make it somewhat easier to use the data), I first created an equally balanced
+      arXiv/viXra set with approximately 60,000 data points, with the unused arXiv data set aside for later use. The
+      balanced dataset<d-footnote id='balance'>
+        The balanced set was used for the current set of posts in this series. A post using the full dataset with a
+        discussion of how to handle the data imbalanced in planned for a future date.
+      </d-footnote> was then split into train/val/test subsets in a 70:15:15 ratio.
+    </p>
 
   </d-article>
 
@@ -240,26 +374,20 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       Thank you to <a href="https://distill.pub" target="_blank" rel="noopener noreferrer">the <em>Distill</em> team</a>
       for making their
       <a href="https://github.com/distillpub" target="_blank" rel="noopener noreferrer">article template publicly
-        available.</a> I also gratefully
-      acknowledge
-      useful conversations with Matt Gormley, Matt Malloy, Thomas Schaaf, and Rami Vanguri in the course of this
-      project.
+        available.</a> Conversations with Matt Malloy, Thomas Schaaf, and Rami Vanguri were useful in my attempts to
+      find and sanity check the issue found in the "Cautionary Tale" section above.
     </p>
 
 
     <h3>Helpful Links and Resources</h3>
-
-    <p>
-      Feather format. Dask.
-    </p>
-
     <ul class="color-dot-ul">
       <li>
-        <a target="_blank" rel="noopener noreferrer" href="https://vixra.org">Link 1</a>
-      </li>
-      <li>
-        <a target="_blank" rel="noopener noreferrer" href="https://vixra.org">Link 2</a>
-      </li>
+        I first attempted to handle the arXiv data on my laptop locally, which could not load the set into memory. <a
+          target='_blank' rel='noopener noreferrer' href='https://dask.org/'>
+          <d-code language='python'>dask</d-code>was very useful
+        </a> for being able to lazily load the data for processing, though I eventually switched to using Colab
+        notebooks whose computing power was sufficient to simply load the sets in to memory.
+
     </ul>
 
     <d-footnote-list></d-footnote-list>
