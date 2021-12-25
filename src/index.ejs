@@ -42,14 +42,14 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
             }
           ]
         },
-        "date" : "5 November, 2021"
+        "date" : "15 December, 2021"
       }
   </script>
   </d-front-matter>
 
   <d-title>
     <h1>arXiv/viXra - The Data</h1>
-    <p>Diving in.</p>
+    <p>Defining the problem and diving in.</p>
   </d-title>
 
   <d-article>
@@ -74,7 +74,7 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
     <p>
       This quote is from Andrej Karpaty's excellent post
       <em>
-        <a target="_blank" rel="noopener noreferrer" href="https://arxiv.org">A Recipe for Training Neural Networks
+        <a target="_blank" rel="noopener" href="https://arxiv.org">A Recipe for Training Neural Networks
         </a>
       </em>, and it is advice<d-footnote id="d-footnote-wrong-guesses">
         Another sage piece of advice from the post: <em>don't be a hero.</em> Start simple and be conservative in your
@@ -82,15 +82,31 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       </d-footnote> well-taken. Below, I summarize my results in applying this advice to the arXiv/viXra
       datasets. I detail the gross properties of the sets,
       their patterns and distinctions,
-      and the process of normalizing the text for the purposes of both feeding the data into ML models and preventing
-      accidental cheating by
-      including unwanted technical clues in the training examples. In particular, I provide a cautionary tale in which I
-      failed at this final task.
+      and the process of filtering and normalizing the text. These last two processes serve multiple purposes:
+    </p>
+
+    <ul>
+      <li>
+        <b>Filtering</b>: Removing various types of outliers in the data narrows and helps to define the scope of the
+        classification
+        problem.
+      </li>
+      <li>
+        <b>Normalizing</b>: Processing the text both prepares the data for ML models and is important for preventing
+        accidental cheating via undesired technical clues. A cautionary tale on this last point is provided below.
+      </li>
+    </ul>
+
+    <p>
+      Various design choices enter into the above and I explain the decisions I made below.
     </p>
 
 
-
     <h3>Gross Properties</h3>
+
+    <h4>
+      Data Imbalance
+    </h4>
 
     <p>
       There is far more data<d-footnote id='data'>
@@ -144,7 +160,9 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
     </p>
 
 
-    <h3>Patterns</h3>
+    <h4>
+      Patterns
+    </h4>
 
     <p>
       Various patterns emerge when inspecting the data.
@@ -211,7 +229,7 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       bunch.
     </p>
 
-    <d-figure style="grid-column-end: page-end">
+    <figure style="grid-column-end: page-end" id='corner_plot'>
       <img src='images/balanced_filtered_data_df_pairplot.png' alt='Corner plot of data statistics.'>
       <figcaption>
         Some of the statistical differences between arXiv (blue) and viXra (orange) data.
@@ -234,19 +252,23 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       that the paper is from viXra.
     </p>
 
-    <h3>Filtering</h3>
+    <h3>Filtering, Normalization, and Design Choices</h3>
+
+    <h4>Filters and Technical Markers</h4>
 
     <p>
       Distinguishing arXiv and viXra papers by technical clues such as the characters they use is not particularly
       interesting. Instead, being able to make the distinction based on a title or abstract's actual content (i.e.
       semantic meaning) would be much preferrable. At the same time, some technical markers (primarily the presence or
-      absence of <d-code language='python'>LaTeX</d-code>) <em>do</em> carry significant stylistic meaning and, as a
+      absence of <d-code language='python'>LaTeX</d-code>) <em>do</em> carry significant meaning and, as a
       researcher, can represent obvious signals as to a paper's source.
     </p>
 
     <p>
-      For the above reasons, I apply filters such as the following to the data (<a target='_blank'
-        rel='noopener noreferrer'
+      I have attempted to strike a balance between concerns like the above by filtering out papers which are very easy
+      to classify
+      due to reasons such as not being in English (a strong viXra signal) or containing inordinate number of uncommon
+      characters. Some examples (<a target='_blank' rel='noopener noreferrer'
         href='https://github.com/garrett361/arxiv-vixra-ml/tree/main/data_exploration'>notebooks here</a>):
     </p>
 
@@ -260,13 +282,17 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       </li>
     </ul>
     <p>
-      The above steps primarily filter out viXra articles which would be fairly trivial to classify and are hence not
-      particularly interesting for this project.
+      The above steps primarily filter out viXra articles which would be fairly trivial to classify<d-footnote
+        id='trivia>l-classify'>
+        The examples at <a target='_blank' rel='noopener noreferrer'
+          href='https://garrettgoon.com/arxiv-vixra-quiz/'>garrettgoon.com/arxiv-vixra-quiz</a> have all passed these
+        series of filters. The examples were randomly chosen from the balanced training set used for all ML models.
+      </d-footnote>.
     </p>
 
-    <h3>
+    <h4>
       Text Normalization
-    </h3>
+    </h4>
 
     <p>
       Properly normalizing the remaining text is important both for avoiding accidental cheating (see the next section)
@@ -279,9 +305,10 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
         <d-code language='python'>\r</d-code> <a target='_blank' rel='noopener noreferrer'
           href='https://stackoverflow.com/questions/1279779/what-is-the-difference-between-r-and-n'>carriage return</a>
         character, and 40% of arXiv titles (and none of the viXra titles) have a <d-code language='python'>\n</d-code>
-        newline character. Neither of these technical clues are accessible to the human participants at <a
+        newline character. Neither of these technical clues are directly accessible to the human participants at <a
           target='_blank' rel='noopener noreferrer'
-          href='https://garrettgoon.com/arxiv-vixra-quiz/'>garrettgoon.com/arxiv-vixra-quiz</a>.
+          href='https://garrettgoon.com/arxiv-vixra-quiz/'>garrettgoon.com/arxiv-vixra-quiz</a>, but would be obvious
+        markers to an ML architecture.
       </d-footnote>.
     </p>
 
@@ -305,19 +332,17 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       </li>
     </ul>
 
-    <h3>Cautionary Tale</h3>
+
+    <h4>Cautionary Tale</h4>
 
     <p>
       If you see a plot of validation accuracy vs time like the one below<d-footnote id='cheat'>
-        This plot was from a test in which a single blank space was inserted at the end of every viXra title. A simple
-        linear model was used in the test: one-hot encoded text was flattened into a vector and passed through a single
-        <d-code language='python'>nn.Linear</d-code> layer and sigmoid function, i.e. the arXiv/viXra probability for a
-        text vector <d-math>\vec{t}</d-math> was given by <d-math>s = \sigma\left(W\cdot \vec{t}+b\right)</d-math>. In
-        other words, logistic regression. The actual cheat described here was found when testing recurrent architectures and the corresponding plot was even
-        more dramatic. This test was done to demonstrate the ability of even relatively simple models to pick up on
-        technical biases.
-      </d-footnote> for any non-trivial dataset, you are probably cheating. The plot correspond to achieving near 100%
-      validation-set accuracy after only a handful of epochs. Finding the cheat
+        This plot is from a test in which a single blank space was inserted at the end of every viXra title. After
+        one-hot encoding and flattening the text
+        the ensuring vector was fed into a logistic regression model which produced the below performance. This test was
+        done to demonstrate the ability of even relatively simple models to pick up on technical clues.
+      </d-footnote> for any non-trivial dataset, you are probably cheating. The plot correspond to achieving near
+      perfect performance on the validation set after training for only a handful of epochs. Finding the cheat
       may not be easy, however.
     </p>
 
@@ -328,24 +353,30 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
     </iframe>
 
     <p>
-      In the course of testing recurrent architectures, I generate a more-extreme version of the above when training
-      on
-      abstracts. The analogous plots for the title data did not show similarly surprising accuracy. While I expected
-      to
-      (and eventually did) find some technical cheat as the cause, it was quite confusing how this could occur for the
+      In the course of training recurrent architectures, I generated an even more-extreme version of the above when
+      building a classifier for abstracts.
+      After seeing the training examples only once, i.e., after a single epoch, the validation set accuracy was over
+      99%.
+    </p>
+
+    <p>
+      To make matter more confusing, the analogous models for classifying titles did not show similarly surprising
+      accuracy. While I expected
+      to (and eventually did) find some technical cheat as the cause, it was unclear how this could occur for the
       abstracts, but not the titles, as both texts had the same normalization and filtering procedures applied to
       them.
     </p>
 
     <p>
-      In the end, the root cause was the fact that all raw arXiv abstracts started with a blank space and ends with a
-      <d-code language='python'>\n</d-code> newline character, while none of the other datasets displayed similar
+      In the end, the root cause was the fact that all raw arXiv abstracts started with a blank space and ended with a
+      <d-code language='python'>\n</d-code> newline character, while none of the other datasets displayed such strong
       technical regularities. Due to a typo<d-footnote id='typo'>
-        I had a simple <d-code language='python'>s.strip()</d-code> line in my code, rather than the desired <d-code
-          language='python'>s = s.strip()</d-code>.
-      </d-footnote>
-      this leading and trailing whitespace was not properly stripped. Because the technical clues were in whitespace,
-      they were difficult to detect by eye, but a systematic exploration of the data revealed the issue.
+        Rather than the desired <d-code language='python'>s = s.strip()</d-code> line in my code, I had accidentally had
+        a simple <d-code language='python'>s.strip()</d-code>, which does nothing to modify the to-be-returned <d-code
+          language='python'>s</d-code>.
+      </d-footnote>, this leading and trailing whitespace was not properly stripped. Because the technical clues were in
+      whitespace,
+      they were difficult to detect by eye, but careful exploration of the data finally revealed the issue.
     </p>
 
     <h3>Final Datasets</h3>
@@ -355,8 +386,8 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
       massive data imbalance (and make it somewhat easier to use the data), I first created an equally balanced
       arXiv/viXra set with approximately 60,000 data points, with the unused arXiv data set aside for later use. The
       balanced dataset<d-footnote id='balance'>
-        The balanced set was used for the current set of posts in this series. A post using the full dataset with a
-        discussion of how to handle the data imbalanced in planned for a future date.
+        Most of the posts in this series regard models which were trained on the balanced set. A post on the utilization
+        of the remaining data and handling the massive imbalance is planned for a future date.
       </d-footnote> was then split into train/val/test subsets in a 70:15:15 ratio.
     </p>
 
@@ -393,7 +424,7 @@ as with /static as their root. E.g. <img src="/diagrams/fig1.png">
 
     <h3>All Project Posts</h3>
 
-    <p>Links to all posts for this work.
+    <p>Links to all posts in this series.
       <em>Note: all code for this project can be found <a target='_blank' rel='noopener noreferrer'
           href='https://github.com/garrett361/arxiv-vixra-ml'>on my GitHub page</a>.
       </em>
